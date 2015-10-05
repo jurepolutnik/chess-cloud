@@ -20,6 +20,8 @@ MASTER_NAME_PREFIX  =  CLUSTER_NAME_PREFIX + 'master-'
 FRONTEND_NAME_PREFIX  =  CLUSTER_NAME_PREFIX + 'frontend-'
 
 nodes = None
+images = None
+sizes = None
 driver = None
 
 ###########################################################################
@@ -260,11 +262,15 @@ def get_nodes (prefix=CLUSTER_NAME_PREFIX, refetch=False):
 	return nodes_res
 
 def get_image(name):
-	images = driver.list_images()
+	global images
+	if images == None:
+		images = driver.list_images()
 	return next ((img for img in images if img.name==name), None)
 
 def get_size (name):
-	sizes = driver.list_sizes()
+	global sizes
+	if sizes == None:
+		sizes = driver.list_sizes()
 	return next ((size for size in sizes if size.id==name or size.name==name), None)
 
 def create_masters(size_masters):
