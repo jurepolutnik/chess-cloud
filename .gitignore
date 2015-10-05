@@ -9,5 +9,6 @@ deploy/credentials
 deploy/conf_local.ini
 
 **/*.pyc
+**/*.pem
 **/*.swp
 */*.tar.gz
