@@ -1,0 +1,27 @@
+<div class="row">
+    <div class="col-md-8">
+        <section class="widget">
+            <header>
+                <h4>
+                    <i class="fa fa-download"></i>
+                        Game import
+                </h4>
+            </header>
+            <div class="body">
+            	<legend class="section">
+            		Insert game in PGN format.
+                            </legend>
+
+                <div class="controls form-group" style="padding-left:15px; padding-right:15px">
+                    <textarea id="description" ng-model="pgn" rows="8" name="text" class="form-control"></textarea>
+                    <span class="help-block">Copy-paste</span>
+
+                      <alert ng-repeat="alert in alerts" type="alert.type" close="closeAlert($index)">{{alert.msg}}</alert>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" ng-click="createGame(pgn)">Analyse!</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

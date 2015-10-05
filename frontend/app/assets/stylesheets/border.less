@@ -1,0 +1,75 @@
+@selected: #999999;
+
+#gameInfo
+{
+    margin-bottom: 21px;
+    span
+    {
+        display: inline-block;
+        min-width: 50px;
+        font-weight: bold;
+        margin-right: 5px;
+    }
+}
+
+#board-buttons
+{
+    padding-top: 8px;
+}
+
+
+
+.alternatives
+{
+    margin-bottom: 20px;
+    .info
+    {
+        padding: 5px;
+        margin-bottom: 5px;
+        span
+        {
+            margin-right: 5px;
+        }
+
+    }
+    .path
+    {
+        padding: 5px;
+        width: 100%;
+        min-height: 20px;
+
+        .score
+        {
+            float: left;
+            width: 50px;
+        }
+        .mate { color: blue; }
+        .plus { color: #56bc76; }
+        .minus { color: #e5603b; }
+        
+        .moves
+        {
+            margin-left: 50px;
+        }
+    }
+}
+/*
+ * LIST
+ */
+.movesList
+{
+    span
+    {
+        &.selected
+        {
+            background-color:@selected
+        }
+        &:hover
+        {
+            cursor: hand;
+            cursor: pointer;
+            background-color:lighten(@selected, 5%);
+        }
+    }
+}
+

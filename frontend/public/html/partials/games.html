@@ -1,0 +1,31 @@
+
+<div class="row">
+    <div class="col-md-8">
+        <section class="widget">
+            <header>
+                <h4>
+                    <i class="fa fa-list"></i>
+                        Games table
+                </h4>
+            </header>
+            <div class="body">
+				<table class="table table-striped no-margin sources-table">
+				<thead>
+					<tr>
+						<th class="source-col-header">#</th>
+						<th   class="source-col-header">Match</th>
+						<th class="source-col-header">Event</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr ng-repeat="game in games track by $index">
+						<td><a href='#/game/{{game.id}}'>{{$index+1}}</a></td>
+						<td>{{game.White}} - {{game.Black}}</td>
+						<td>{{game.Event}}</td>
+					</tr>
+				</tbody>
+				</table>
+            </div>
+        </section>
+    </div>
+</div>

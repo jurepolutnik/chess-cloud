@@ -1,0 +1,1394 @@
+/*
+define(['angular', 'jquery'],
+	function (angular) {
+  'use strict';
+*/
+
+/* Services */
+
+
+/*
+var myApp = angular.module ('myApp.chess', ['ngResource']);
+
+myApp.factory ('GamesRetriever', function($resource){
+    return $resource('/games/:gameId')
+});
+*/
+
+define(['angular'],function() {
+	'use strict';
+
+function ChessService(){
+
+  var service = {};
+  var parser = new ChessParser();
+  var currentGame = null; 
+  var currentBoard = null; 
+
+  service.parsePGN = function(pgn)
+  {
+      parser.init();
+      parser.parsePGN (pgn);
+      return parser.game;
+  }
+
+  service.parseFEN = function (fen)
+  {
+      parser.init();
+      parser.parseFEN (fen);
+      return parser.game;
+  }
+
+  service.formatPGN = function (game)
+  {
+
+  }
+
+  service.formatFEN = function (game)
+  {
+      return parser.formatFEN (game);
+
+  }
+
+  service.parseUCIAlternative = function (fromHalfMove, moves)
+  {
+    currentBoard.moveTo (fromHalfMove);
+    var path = new GamePath();
+    currentGame.alternativePaths.push (path);
+    path.fromHalfMove = fromHalfMove;
+    path.prevPath = currentGame.mainPath;
+    currentGame.activePath = path;
+    for (var index = 0; index < moves.length; ++index) {
+        var move = moves[index];
+        var from = move.substring(0,2);
+        var to = move.substring(2,4);
+        currentBoard.move(from, to);
+    }
+
+    currentBoard.moveTo (fromHalfMove);
+    return path;
+  }
+
+  service.createGame = function () { return new Game();}
+  service.createBoard = function (game) { return new ChessBoard(game);}
+
+  service.setCurrentGame = function (game) {
+      currentGame = game ;
+      currentGame.mainPath.transitions =  currentGame.transitions;
+      currentGame.mainPath.moves =  currentGame.moves;
+      currentGame.mainPath.fullMoves =  currentGame.fullMoves;
+      currentGame.transitions = null;
+      currentGame.moves = null;
+      currentGame.fullMoves = null;
+  }
+  service.getCurrentGame = function () { return currentGame; }
+
+  service.setCurrentBoard = function (board) { currentBoard = board ; }
+  service.getCurrentBoard = function () { return currentBoard; }
+
+  return service;
+  }
+
+	//ChessService.$inject = [];
+
+	return ChessService;
+});
+
+
+
+
+//////////////////////////////////////////////////////////////
+// MODELS and PARSERS - TODO: move in separarte files
+//
+
+
+// GAME model
+function GamePath ()
+{
+    this.fromHalfMove = -1;
+    this.prevPath = null;
+    this.transitions = [];
+    this.moves = [];
+    this.fullMoves = [];
+}
+
+function Game() {
+  this.active_color = 'w';
+  this.castling_availability = 'KQkq';
+  this.en_passant_square = '-';
+  this.halfmove_clock = 0;
+  this.fullmove_number = 1;
+  this.halfmove_number = 0;
+
+  this.mainPath = new GamePath();
+  this.activePath = this.mainPath;
+  this.alternativePaths = [];
+
+  this.body = '';
+  this.header = [];
+  this.moves = [];
+  this.fullMoves = [];
+  this.transitions = [];
+  this.annotations = [];
+  this.raw_annotations = [];
+
+  this.next_piece_id = 64;
+  this.board_direction = 1;
+
+  this.position = [
+    /* 1 */ ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
+    /* 2 */ ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'], 
+    /* 3 */ ['','','','','','','',''], 
+    /* 4 */ ['','','','','','','',''], 
+    /* 5 */ ['','','','','','','',''], 
+    /* 6 */ ['','','','','','','',''], 
+    /* 7 */ ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'], 
+    /* 8 */ ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r']
+
+    ];
+
+};
+
+// BOARD model
+function ChessBoard (game)
+{
+
+    this.game = game;
+
+    var move = 0;
+
+
+    // HELPER
+    this.copy = function (arr){
+        var new_arr = arr.slice(0);
+        for(var i = new_arr.length; i--;)
+            new_arr[i] = arr[i].slice(0);
+        return new_arr;
+    }
+
+  this.version = "1.0.0";
+
+  this.history = new Array();
+
+  this.getPieceAt = function(pos)
+  {
+        var posXY = this.parsePostion(pos);
+        return this.getPieceAtXY (posXY);
+  }
+
+  this.getPieceAtXY = function(posXY)
+  {
+        var p = this.game.position[posXY[0]][posXY[1]];
+        if (p === void 0) return null; // is undefined? Out of bounds
+        else return p;
+  }
+
+  this.updateFullMoves = function()
+  {
+    this.game.activePath.fullMoves.splice(0);
+    for (var i = 0 ; i < this.game.activePath.moves.length ; i++) {
+      if (i%2 == 0)
+      {
+        this.game.activePath.fullMoves[i/2] = {white:this.game.activePath.moves[i], black:null};
+      }
+      else 
+      {
+        this.game.activePath.fullMoves[(i-1)/2].black = this.game.activePath.moves[i];
+      }
+    };
+  }
+
+  this.move = function (from, to)
+  {
+        if (this.isValidMove(from, to))
+        {
+            var fromXY = this.parsePostion(from);
+            var toXY = this.parsePostion(to);
+            var piece = this.getPieceAt (from);
+
+
+
+            if (this.game.activePath.transitions.length > this.game.halfmove_number)
+            {
+                this.game.activePath.transitions = this.game.activePath.transitions.slice(0, this.game.halfmove_number);
+                this.game.activePath.moves = this.game.activePath.moves.slice(0, this.game.halfmove_number);
+            }
+
+            // Prepare transitions
+            var pieceToRemove = this.getPieceAt (to);
+            var piecePosition = to;
+
+            // En Passant?
+            if (piece.toUpperCase() == 'P' && to === this.game.en_passant_square)
+            {
+                var diff = (piece == 'P') ? -1 : 1;
+                pieceToRemove = this.getPieceAtXY ([toXY[0]+diff, toXY[1]])
+                piecePosition = this.formatPosition ([toXY[0]+diff, toXY[1]]);
+            }
+
+            if (pieceToRemove)
+            {
+                // Remove transition
+                this.saveTransition({type: 'r', num : this.game.halfmove_number, 
+                    dom_id : -1, piece: pieceToRemove, from : piecePosition});
+            }
+
+            // TODO: hack - dom_id ==> piece
+            this.saveTransition({type: 'm', num : this.game.halfmove_number, 
+                dom_id : piece, from : from, to : to});
+
+            // Castling?
+            var castling = '';
+            if (piece.toUpperCase() == 'K' && Math.abs (fromXY[1] - toXY[1])>1)
+            {
+                var rook = piece=='K' ? 'R' : 'r';
+                var from, to;
+                // SHORT
+                if (toXY[1] - fromXY[1] == 2)
+                {
+                    castling = 'O-O';
+                    from = this.formatPosition([toXY[0], 7]);
+                    to =   this.formatPosition([toXY[0], 5]);
+                }
+                // LONG
+                if (toXY[1] - fromXY[1] == -2)
+                {
+                    castling = 'O-O-O';
+                    from = this.formatPosition([toXY[0], 0]);
+                    to =   this.formatPosition([toXY[0], 3]);
+                }
+
+                this.saveTransition({type: 'm', num : this.game.halfmove_number,
+                        dom_id : rook, from : from, to : to});
+            }
+
+            // Promotion? TODO: support for other pieces
+            var promotion = '';
+            if (piece.toUpperCase() == 'P' && (toXY[0] == 0 || toXY[0] == 7))
+            {
+                var queen = toXY[0] == 7 ? 'Q' : 'q';
+                promotion = '=Q';
+
+                this.saveTransition({type: 'r', num : this.game.halfmove_number,
+                    dom_id : -1, piece: piece, from : to});
+                this.saveTransition({type: 'a', num : this.game.halfmove_number,
+                     dom_id : -1, to : to, piece : queen});
+            }
+
+
+            // PGN move
+            var move = to;
+            if (pieceToRemove) move = 'x'+ move;
+            if (piece.toUpperCase() != 'P') move = piece.toUpperCase() + move;
+            else if (pieceToRemove) move = from.charAt(0)+move;
+            if (castling) move = castling;
+            if (promotion) move += promotion;
+
+            this.game.activePath.moves.push (move);
+            this.updateFullMoves();
+
+            // Update board
+            var transition = this.game.activePath.transitions [this.game.halfmove_number].forward;
+            this.doTransition (transition);
+
+            this.game.halfmove_number++;
+            // Debug - print board
+          //this.printBoard();
+
+          this.updateStats();
+          return true;
+        }
+
+        return false;
+  }
+
+    this.moveBackward = function ()
+    {
+       if (this.game.halfmove_number == 0) return;
+       this.game.halfmove_number--;
+
+       var transition = this.game.activePath.transitions [this.game.halfmove_number].backward;
+       this.doTransition (transition);
+
+       // Fall-back from alternative path
+       if (this.game.halfmove_number == this.game.activePath.fromHalfMove)
+           this.game.activePath = this.game.activePath.prevPath;
+
+       this.updateStats();
+
+    }
+
+    this.moveForward = function ()
+    {
+        //if ()
+       if (this.game.halfmove_number >= this.game.activePath.transitions.length) return;
+       var transition = this.game.activePath.transitions [this.game.halfmove_number].forward;
+       this.doTransition (transition);
+       this.game.halfmove_number++;
+       this.updateStats();
+    }
+
+    this.updateStats = function ()
+    {
+        if (this.game.halfmove_number %2 == 0)
+            this.game.active_color = 'w';
+        else
+            this.game.active_color = 'b';
+
+        this.game.fullmove_number = Math.floor (this.game.halfmove_number /2)+1;
+
+        // TODO : castling availability - have pieces moved?
+        this.game.castling_availability = '';
+        if (this.getPieceAt ('e1') === 'K')
+        {
+            if (this.getPieceAt('h1') == 'R')
+                this.game.castling_availability += 'K';
+            if (this.getPieceAt('a1') == 'R')
+                this.game.castling_availability += 'Q';
+        }
+        if (this.getPieceAt ('e8') === 'k')
+        {
+            if (this.getPieceAt('h8') == 'r')
+                this.game.castling_availability += 'k';
+            if (this.getPieceAt('a8') == 'r')
+                this.game.castling_availability += 'q';
+        }
+        if (this.game.castling_availability === '')
+            this.game.castling_availability += '-';
+
+        // en_passant
+        this.game.en_passant_square = '-';
+        if (this.game.halfmove_number > this.game.activePath.fromHalfMove+1)
+        {
+
+            var transition = this.game.activePath.transitions [this.game.halfmove_number-1].forward;
+            var split = transition[0].split (':');
+            if (split[0] === 'm')
+            {
+                var id = split[1];
+                var from = this.parsePostion (split[2]);
+                var to = this.parsePostion (split[3]);
+
+                var hm = this.game.halfmove_number-1;
+
+                // Black is on move, last move was white pawn
+                if (hm % 2 == 0 && (Math.floor(id / 8) == 6 || id == 'P') )
+                {
+                    if (to[0] - from[0] == 2)
+                    {
+                         this.game.en_passant_square = this.formatPosition ([to[0]-1, to[1]]) ;
+                    }
+                }
+
+                if (hm % 2 == 1 && (Math.floor(id / 8) == 1 || id == 'p') )
+                {
+                    if (to[0] - from[0] == -2)
+                    {
+                         this.game.en_passant_square = this.formatPosition ([to[0]+1, to[1]]) ;
+                    }
+                }
+
+            }
+
+        }
+        // TODO : halfmove_clock
+    }
+
+    this.isValidMove = function (from, to)
+    {
+
+        // CACHE - this method will be called frequently
+        var piece = this.getPieceAt (from);
+        if (piece == 0) return false;
+
+        var vMoves = this.getValidMoves (piece, from);
+        var pos = $.inArray (to, vMoves); 
+        if (pos < 0) return false;
+
+        return true;
+    }
+    
+    /* 
+     * Valid moves generators 
+     */
+
+    this.getValidMoves = function(piece, pos)
+    {
+        if (piece.toUpperCase() != piece) // isBlack
+        {
+          if (this.game.halfmove_number %2 == 0) return false;
+        }
+        else // isWhite
+        {
+          if (this.game.halfmove_number %2 == 1) return false;
+        }
+        
+        var arrXY = this.getValidMovesXY(piece, this.parsePostion(pos));
+        var arr = new Array();
+
+        for (var i = 0; i < arrXY .length ; i++) {
+            arr.push(this.formatPosition(arrXY [i]));
+        };
+
+        return arr;
+    }
+
+    /*
+     *  PRIVATE STUFF : TODO: remove this
+     */
+    this.doTransition = function (transition)
+    {
+        for (var i = 0; i < transition.length; i++) {
+            var split = transition[i].split (':');
+            var type = split[0];
+
+
+            switch(type) {
+            case 'r':
+                if (typeof split[3] != 'undefined')
+                {
+                    // en_passant
+                    var from = this.parsePostion (split[3]);
+                    this.game.position[from[0]][from[1]] = '';
+                }
+              break;
+            case 'm':
+                var from = this.parsePostion (split[2]);
+                var to = this.parsePostion (split[3]);
+                var p = this.game.position[from[0]][from[1]];
+                this.game.position[from[0]][from[1]] = '';
+                this.game.position[to[0]][to[1]] = p;
+              break;
+            case 'a':
+              var p = split[2];
+              var to = this.parsePostion (split[3]);
+              this.game.position[to[0]][to[1]] = p;
+              break;
+          }
+        };
+    }
+
+    this.saveTransition = function(options) {
+        var forward  = null;
+        var backward = null;
+        var num      = options.num;
+
+        if (options.type == 'a') {
+          forward  = ["a:" + options.dom_id + ":" + options.piece + ":" + options.to];
+          backward = ["r:" + options.dom_id + ":" + options.piece + ":" + options.to];
+        } else if (options.type == 'm') {
+          forward  = ["m:" + options.dom_id + ":" + options.from + ":" + options.to];
+          backward = ["m:" + options.dom_id + ":" + options.to + ":" + options.from];
+        } else if (options.type == 'r') {
+          forward  = ["r:" + options.dom_id + ":" + options.piece + ":" + options.from];
+          backward = ["a:" + options.dom_id + ":" + options.piece + ":" + options.from];
+        }
+
+        if (this.game.activePath.transitions[num] == null) {
+          this.game.activePath.transitions[num] = { forward : forward, backward : backward };
+        } else {
+          this.game.activePath.transitions[num].forward  = this.game.activePath.transitions[num].forward.concat(forward);
+          this.game.activePath.transitions[num].backward = backward.concat(this.game.activePath.transitions[num].backward);
+        }
+    }
+
+
+    this.moveToPath = function (halfmove, path)
+    {
+        if (this.game.activePath != path)
+        {
+            var to = path.fromHalfMove;
+            if (to<0) to = this.game.activePath.fromHalfMove; // Main path exception
+            this.moveTo (to);
+            this.game.activePath = path;
+        }
+
+        this.moveTo (halfmove);
+    }
+
+    this.moveTo = function(halfmove_number) {
+        while (halfmove_number < this.game.halfmove_number) {
+          this.moveBackward();
+        }
+
+        while (halfmove_number > this.game.halfmove_number) {
+          this.moveForward();
+        }
+  }
+
+    // e4 --> [4,5] (4th row, 5th column)
+    this.parsePostion = function (pos)
+    {
+        var column = pos.substr(0,1);
+        var row = pos.substr(1,1);
+
+        return [parseInt(row)-1, column.charCodeAt(0) - ('a').charCodeAt(0)];
+    }
+
+    this.formatPosition = function (posXY)
+    {
+        var rank = (parseInt(posXY[0])+1) + '';
+        var file = String.fromCharCode(parseInt(posXY[1]) + ('a').charCodeAt(0) );
+        return file+rank;
+    }
+
+  this.printBoard  = function()
+  {
+    for (var r = 0; r < this.game.position.length; r++) {
+      console.log(this.game.position[r]);
+    };
+  }
+
+  this.getValidMovesXY = function(piece, posXY)
+  {
+    if (piece == '') return null;
+
+    var p = piece.toUpperCase();
+    // TODO: Check/Mate
+    var moves;
+    switch (p)
+    {
+      case 'P': moves = this.getValidPawnMoves(piece, posXY); break;
+      default : moves = this.getValidPieceMoves(piece, this.pieces[p], posXY); break;
+    }
+
+    // Castling
+    if (p == 'K')
+    {
+        var x = (piece == 'K') ? 0 : 7;
+        var y = 4;
+        if (posXY[0] == x && posXY[1] == y)
+        {
+            var kingside = (piece == 'K') ? 'K' : 'k';
+            var queenside = (piece == 'K') ? 'Q' : 'q';
+
+            if (this.game.castling_availability.indexOf(kingside)>=0)
+            {
+                if (this.getPieceAtXY ([x, y+1]) == '' && this.getPieceAtXY ([x, y+2]) == '' )
+                    moves.push ([x, y+2]);
+            }
+            if (this.game.castling_availability.indexOf(queenside)>=0)
+            {
+                if (this.getPieceAtXY ([x, y-1]) == '' && this.getPieceAtXY ([x, y-2]) == '' && this.getPieceAtXY ([x, y-3]) == '' )
+                    moves.push ([x, y-2]);
+            }
+        }
+    }
+
+    return moves;
+  }
+
+
+    this.getValidPawnMoves = function (piece, posXY)
+    {
+        var x = posXY[0];
+        var y = posXY[1];
+        var validMoves = new Array();
+
+        //White
+        if (piece == piece.toUpperCase())
+        {
+            var p = [x+1, y];
+            if (this.getPieceAtXY(p) === '')
+            {
+                validMoves.push(p);
+                if (x == 1) // 2. rank
+                {
+                    var p = [x+2, y];
+                    if (this.getPieceAtXY(p) === '') validMoves.push(p);
+                }
+            }
+
+            // Captures
+            p = [x+1, y-1];
+            if (this.isValidPosition (p))
+            {
+                var piece = this.getPieceAtXY(p);
+                if (piece != '' && piece == piece.toLowerCase()) validMoves.push(p);
+                else if (this.game.en_passant_square === this.formatPosition(p))  validMoves.push(p);
+            }
+
+            p = [x+1, y+1];
+            if (this.isValidPosition (p))
+            {
+                var piece = this.getPieceAtXY(p);
+                if (piece != '' && piece == piece.toLowerCase()) validMoves.push(p);
+                else if (this.game.en_passant_square === this.formatPosition(p))  validMoves.push(p);
+            }
+        }
+        //Black
+        else
+        {
+            var p = [x-1, y];
+            if (this.getPieceAtXY(p) === '')
+            {
+                validMoves.push(p);
+                if (x == 6) // 2. rank
+                {
+                    var p = [x-2, y];
+                    if (this.getPieceAtXY(p) === '') validMoves.push(p);
+                }
+            }
+
+            p = [x-1, y-1];
+            if (this.isValidPosition (p))
+            {
+                var piece = this.getPieceAtXY(p);
+                if (piece != '' && piece === piece.toUpperCase()) validMoves.push(p);
+                else if (this.game.en_passant_square === this.formatPosition(p))  validMoves.push(p);
+            }
+
+            p = [x-1, y+1];
+            if (this.isValidPosition (p))
+            {
+                var piece = this.getPieceAtXY(p);
+                if (piece != '' && piece === piece.toUpperCase()) validMoves.push(p);
+                else if (this.game.en_passant_square === this.formatPosition(p))  validMoves.push(p);
+            }
+        }
+        return validMoves;
+    }
+
+    this.isValidPosition = function (posXY)
+    {
+        return posXY[0] >= 0 && posXY[0] <= 7 && posXY[1]>=0 && posXY[1]<=7;
+    }
+
+
+    this.getValidPieceMoves = function(piece, pieceVectors, posXY)
+    {
+        var x = posXY[0]; var y = posXY[1];
+        var validMoves = new Array ();
+        for (var i = pieceVectors.vectors.length - 1; i >= 0; i--) {
+            var vector = pieceVectors.vectors[i]
+            var xi = x; var yi = y;
+
+            for (var j = 0; j < vector.limit; j++)
+            {
+                xi += vector.x;
+                yi += vector.y;
+                var pos = [xi, yi];
+                if (this.isValidPosition (pos))
+                {
+                    var p = this.getPieceAtXY (pos);
+                    // Capture
+                    if (p != '')
+                    {
+                        if (p.toUpperCase()==p && piece.toLowerCase()==piece)
+                            validMoves.push (pos);
+                        if (p.toLowerCase()==p && piece.toUpperCase()==piece)
+                            validMoves.push (pos);
+
+                        break;
+                    }
+                    else
+                    {
+                        validMoves.push (pos);
+                    }
+                }
+            }
+        }
+
+        return validMoves;
+    }
+
+    this.pieces = {
+        R : {
+          vectors : [
+            { x :  0, y :  1, limit : 8 },
+            { x :  1, y :  0, limit : 8 },
+            { x :  0, y : -1, limit : 8 },
+            { x : -1, y :  0, limit : 8 }
+          ]
+        },
+        N : {
+          vectors : [
+            { x :  1, y :  2, limit : 1 },
+            { x :  2, y :  1, limit : 1 },
+            { x :  2, y : -1, limit : 1 },
+            { x :  1, y : -2, limit : 1 },
+            { x : -1, y : -2, limit : 1 },
+            { x : -2, y : -1, limit : 1 },
+            { x : -2, y :  1, limit : 1 },
+            { x : -1, y :  2, limit : 1 }
+          ]
+        },
+        B : {
+          vectors : [
+            { x :  1, y :  1, limit : 8 },
+            { x :  1, y : -1, limit : 8 },
+            { x : -1, y : -1, limit : 8 },
+            { x : -1, y :  1, limit : 8 }
+          ]
+        },
+        Q : {
+          vectors : [
+            { x :  0, y :  1, limit : 8 },
+            { x :  1, y :  0, limit : 8 },
+            { x :  0, y : -1, limit : 8 },
+            { x : -1, y :  0, limit : 8 },
+
+            { x :  1, y :  1, limit : 8 },
+            { x :  1, y : -1, limit : 8 },
+            { x : -1, y : -1, limit : 8 },
+            { x : -1, y :  1, limit : 8 }
+          ]
+        },
+        K : {
+          vectors : [
+            { x :  0, y :  1, limit : 1 },
+            { x :  1, y :  0, limit : 1 },
+            { x :  0, y : -1, limit : 1 },
+            { x : -1, y :  0, limit : 1 },
+
+            { x :  1, y :  1, limit : 1 },
+            { x :  1, y : -1, limit : 1 },
+            { x : -1, y : -1, limit : 1 },
+            { x : -1, y :  1, limit : 1 }
+          ]
+        }
+    };
+  }
+
+function ChessParser ()
+{
+	$.eachWithContext = function(context, object, callback) {
+	  for ( var i = 0, length = object.length, value = object[0];
+	    i < length && callback.call(context, i, value ) !== false; value = object[++i] ) {}
+	};
+
+
+    this.settings = {
+      fen : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      json_annotations : false
+    };
+
+
+      this.init = function ()
+      {
+        this.initGame();
+        this.setUpBoard( this.parseFEN( this.settings.fen ) );
+      }
+
+      this.initGame = function ()
+      {
+        this.game = new Game();
+      }
+
+      this.boardData = function() {
+        return this._board;
+      };
+
+      this.setUpBoard = function(template) {
+        this._board = this.createBoardDataFromTemplate(template);
+      };
+
+      this.createBoardDataFromTemplate = function(template) {
+        var board = [];
+        $.each(template, function(j, row) {
+          board[j] = [];
+          $.each(row, function(k, val) {
+            if (val != '-') {
+              board[j][k] = { id: (k + 1) + (j * 8) , piece: template[j][k].toString() };
+            } else {
+              board[j][k] = '-';
+            }
+          });
+        });
+
+        return board;
+      };
+
+      this.formatFEN = function (game)
+      {
+        if (!game.position) return "n/a";
+        var fen = "";
+        for (var i = 7;i >= 0; i--) {
+          var row = game.position [i];
+          var empty = 0;
+          for (var j = 0;j < 8; j++) {
+            if (row[j]==="")
+            {
+              empty++;
+              if (j == 7) fen += empty;
+            }
+            else
+            {
+              if (empty>0) fen += empty;
+              fen += row[j];
+              empty = 0;
+            }
+          }
+
+          if (i > 0) fen += "/";
+          else fen += " ";
+        }
+
+        // Whos move, catling, en-pasant (target squere or -), halfmove-clock, fullmove-number
+        fen += game.active_color + " " 
+             + game.castling_availability + " " 
+             + game.en_passant_square + " "
+             + game.halfmove_clock + " "
+             + game.fullmove_number;
+
+        return fen;
+      }
+
+      this.formatPGN = function (game)
+      {
+         // TODO
+         return "n/a";
+      }
+
+      this.parseFEN = function(fen) {
+        // rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2
+        var new_board     = [];
+        var fen_parts     = fen.replace(/^\s*/, "").replace(/\s*$/, "").split(/\/|\s/);
+
+        for (var j = 0;j < 8; j++) {
+          new_board[j] = [];
+          var row = fen_parts[j].replace(/\d/g, this.replaceNumberWithDashes);
+          for (var k=0;k<8;k++) {
+            new_board[j][k] = row.substr(k, 1);
+          }
+        }
+        return new_board;
+      };
+
+      this.validateFEN = function(fen) {
+        var pattern = /\s*([rnbqkpRNBQKP12345678]+\/){7}([rnbqkpRNBQKP12345678]+)\s[bw-]\s(([kqKQ]{1,4})|(-))\s(([a-h][1-8])|(-))\s\d+\s\d+\s*/;
+        return pattern.test(fen);
+      };
+
+      this.parsePGN = function(pgn) {
+        // Do a little clean up on the string
+        pgn = $.trim(pgn).replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+        var instance = this;
+        // Recognize escaped closing curly brackets as part of the comment
+        // This allows us to have json encoded comments
+
+        //pgn = pgn.replace(/\{((\\})|([^}]))+}/g, function(){ return instance.pluckAnnotation.apply(instance, arguments); });
+
+        var headers = ['Event','Site','Date','Round','White','Black','Result'];
+        for (var i=0; i < headers.length; i++) {
+          var re      = new RegExp(headers[i] + ' "([^"]*)"]');
+          var result  = re.exec(pgn);
+          this.game.header[headers[i]] = (result == null) ? "" : result[1];
+        }
+
+        // Find the body
+        this.game.body = /(1\. ?(N[acfh]3|[abcdefgh][34]).*)/m.exec(pgn)[1];
+
+        // Remove numbers, remove result
+        this.game.body = this.game.body.replace(new RegExp("1-0|1/2-1/2|0-1"), '');
+        this.game.body = this.game.body.replace(/^\d+\.+/, '');
+        this.game.body = this.game.body.replace(/\s\d+\.+/g, ' ');
+
+        var moves = $.trim(this.game.body).split(/\s+/);
+        // console.log(moves);
+
+        // This must be a separate variable from i, since annotations don't
+        // count as moves.
+        var move_number = 0;
+        $.eachWithContext(this, moves, function(i, move) {
+          if ( /annotation-\d+/.test(move) ) {
+            this.game.annotations[move_number] = this.game.raw_annotations.shift();
+            return;
+          }
+
+          var fMove_number = Math.floor (move_number/2);
+          if (this.game.fullMoves[fMove_number] == null)
+          {
+              this.game.fullMoves[fMove_number] = {white:null, black:null};
+          }
+          var fMove = this.game.fullMoves[fMove_number];
+          if (move_number%2 == 0)
+          {
+            fMove.white = move;
+          }
+          else
+          {
+            fMove.black = move;
+          }
+
+          this.game.moves[move_number] = move;
+
+          // console.log("Processing move: " + move_number + '.' + move);
+          var player = (move_number % 2 == 0) ? 'w' : 'b';
+
+          // If the move was to castle
+          if ( this.patterns.castle_queenside.test(move) ) {
+            var rank = (player == 'w') ? 1 : 8;
+            this.movePiece(move_number, {from : "e" + rank, to : "c" + rank} );
+            this.movePiece(move_number, {from : "a" + rank, to : "d" + rank} );
+
+          } else if ( this.patterns.castle_kingside.test(move) ) {
+            var rank = (player == 'w') ? 1 : 8;
+            this.movePiece(move_number, {from : "e" + rank, to : "g" + rank} );
+            this.movePiece(move_number, {from : "h" + rank, to : "f" + rank} );
+
+          // If the move was a piece
+          } else if ( this.patterns.piece_move.test(move) ) {
+            var m = this.patterns.piece_move.exec(move);
+            var piece = m[0];
+            var src_file = null;
+            var src_rank = null;
+            var dst_file = null;
+            var dst_rank = null;
+
+            if ( this.patterns.rank_and_file_given.test(move) ) {
+              var m = this.patterns.rank_and_file_given.exec(move);
+              src_file = m[2];
+              src_rank = m[3];
+              dst_file = m[4];
+              dst_rank = m[5];
+            } else if ( this.patterns.file_given.test(move) ) {
+              var m = this.patterns.file_given.exec(move);
+              src_file = m[2];
+              dst_file = m[3];
+              dst_rank = m[4];
+            } else if ( this.patterns.rank_given.test(move) ) {
+              var m = this.patterns.rank_given.exec(move);
+              src_rank = m[2];
+              dst_file = m[3];
+              dst_rank = m[4];
+            } else if ( this.patterns.nothing_given.test(move) ) {
+              var m = this.patterns.nothing_given.exec(move);
+              dst_file = m[2];
+              dst_rank = m[3];
+            }
+
+            var src = this.findMoveSource(piece, src_file, src_rank, dst_file, dst_rank, player);
+            this.movePiece(move_number, {from : src, to : dst_file + dst_rank} );
+
+            // If the move was a pawn
+          } else {
+            var dst_file = null;
+            var dst_rank = null;
+
+            if ( this.patterns.pawn_move.test(move) ) {
+              var m    = this.patterns.pawn_move.exec(move);
+              dst_file = m[1];
+              dst_rank = m[2];
+              var src  = this.findPawnMoveSource(dst_file, dst_rank, player);
+              var dst  = dst_file + dst_rank;
+              this.movePiece(move_number, {from : src, to : dst} );
+
+              // Pawn capture
+            } else if ( this.patterns.pawn_capture.test(move) ) {
+              var m        = this.patterns.pawn_capture.exec(move);
+              dst_file     = m[2];
+              dst_rank     = m[3];
+              var src_file = m[1];
+              var src_rank = parseInt(dst_rank) + ( (player == 'w') ? -1 : 1 );
+
+              // En passant
+              var result = this.pieceAt(dst_file + dst_rank);
+              if (result == '-') this.removePiece(move_number, dst_file + src_rank);
+              this.movePiece(move_number, {from : src_file + src_rank, to : dst_file + dst_rank });
+            }
+
+            // Queening
+            if ( this.patterns.pawn_queen.test(move) ) {
+              this.removePiece(move_number, dst_file + dst_rank);
+
+              var m = this.patterns.pawn_queen.exec(move);
+              var queening_piece = m[1];
+              queening_piece = (player == 'w') ? queening_piece : queening_piece.toLowerCase();
+              this.addPiece(move_number, queening_piece, dst_file + dst_rank);
+            }
+          }
+
+          move_number++;
+        });
+      };
+
+      // src_square = square the piece is currently on
+      // dst_square = square the piece will move to
+      this.cantMoveFromAbsolutePin = function(piece, src_square, dst_square) {
+        // Look for an open vector from piece to the king.
+        var piece_char = piece.piece;
+        var player     = ( piece_char == piece_char.toLowerCase() ) ? 'b' : 'w';
+
+        var result = this.findAbsolutePin(player, this.pieces['R'].vectors, src_square, ['R','Q']);
+        if (result == null) result = this.findAbsolutePin(player, this.pieces['B'].vectors, src_square, ['B','Q']);
+
+        if (result != null) {
+          var vector = result[0];
+          var kings_square = result[1];
+          var pinning_pieces_square = result[2];
+          if (!this.inSquaresArray(dst_square, this.squaresBetweenEndPoints(kings_square, pinning_pieces_square))) {
+            return true;
+          }
+        }
+
+        return false;
+      };
+
+      this.inSquaresArray = function(square, squares) {
+        for (var i=0; i < squares.length; i++) {
+          if (squares[i] == square) return true;
+        };
+
+        return false;
+      };
+
+      this.squaresBetweenEndPoints = function(s,e) {
+        var start   = this.algebraic2Coord(s);
+        var end     = this.algebraic2Coord(e);
+        var tmp     = start;
+        var squares = [];
+        squares.push(this.coord2Algebraic(start[0],start[1]));
+
+        while (tmp[0] != end[0] || tmp[1] != end[1]) {
+          if (tmp[0] < end[0]) tmp[0] += 1;
+          if (tmp[0] > end[0]) tmp[0] -= 1;
+          if (tmp[1] < end[1]) tmp[1] += 1;
+          if (tmp[1] > end[1]) tmp[1] -= 1;
+          squares.push(this.coord2Algebraic(tmp[0],tmp[1]));
+        }
+
+        return squares;
+      };
+
+      this.findAbsolutePin = function(player, vectors, src_square, pieces_that_can_pin_on_this_vector) {
+        // Look at vectors
+        var result = this.findVectorToKing(player, vectors, src_square);
+        if (result != null) {
+          var vector       = result[0];
+          var kings_square = result[1];
+
+          // Find the first piece in opposite direction
+          var flipped_vector = this.flipVector(vector);
+          var result = this.firstPieceFromSourceAndVector(src_square, flipped_vector, flipped_vector.limit);
+          if (result != null) {
+            var pinning_pieces_square = result[1];
+            for (var i=0; i < pieces_that_can_pin_on_this_vector.length; i++) {
+              var pinning_piece = (player == 'w') ?
+                pieces_that_can_pin_on_this_vector[i].toLowerCase() :
+                pieces_that_can_pin_on_this_vector[i].toUpperCase();
+
+              if (result[0].piece == pinning_piece) {
+                return [vector, kings_square, pinning_pieces_square];
+              }
+            };
+          }
+        }
+        return null;
+      };
+
+      this.findVectorToKing = function(player, vectors, src_square) {
+        var king = (player == 'w') ? 'K' : 'k';
+        for (var i = 0; i < vectors.length; i++) {
+          var vector = vectors[i];
+          var result = this.firstPieceFromSourceAndVector(src_square, vector, vector.limit);
+          if (result != null && result[0].piece == king) return [vector, result[1]];
+        }
+        return null;
+      };
+
+      this.findMoveSource = function(piece, src_file, src_rank, dst_file, dst_rank, player) {
+        //console.log("Looking for move source for " + piece + " from " + dst_rank + dst_file);
+        if ( src_file && src_rank ) return src_file + src_rank;
+
+        var dst_square = dst_file + dst_rank;
+        var target_piece = (player == 'w') ? piece : piece.toLowerCase();
+        target_piece = target_piece.toString();
+
+        for (var i = 0; i < this.pieces[piece].vectors.length; i++) {
+          var vector = this.pieces[piece].vectors[i];
+
+          for (var size = 1; size <= vector.limit; size++) {
+            var result = this.pieceFromSourceAndVector(dst_square, vector, size);
+            //console.log("Looking at " + result);
+            if (result == null) break;
+            if (result[0] == '-') continue;
+
+            if (result[0].piece == target_piece) {
+              // Check for absolute pin on the piece in question
+              if (this.cantMoveFromAbsolutePin(result[0], result[1], dst_square)) break;
+
+              if (src_file) {
+                if (result[1].substr(0,1).toString() == src_file) {
+                  return result[1];
+                }
+              } else if (src_rank) {
+                if (result[1].substr(1,1).toString() == src_rank) {
+                  return result[1];
+                }
+              } else {
+                return result[1];
+              }
+            } else {
+              break;
+            }
+          }
+        }
+      };
+
+      this.findPawnMoveSource = function(dst_file, dst_rank, player) {
+        var dst_square    = dst_file + dst_rank;
+        var target_piece  = (player == 'w') ? 'P' : 'p';
+        var direction     = (player == 'w') ? -1 : 1;
+        var vector        = { x : 0, y : direction, limit : 2 };
+
+        for (var size = 1; size <= vector.limit; size++) {
+          var result = this.pieceFromSourceAndVector(dst_square, vector, size);
+          if (result == null) break;
+          if (result[0].piece == target_piece) return result[1];
+          if (result[0] != '-') break;
+        }
+      };
+
+      this.pieceFromSourceAndVector = function(source, vector, limit) {
+        var source_coords = this.algebraic2Coord(source);
+        var row = source_coords[0] - (vector.y * limit);
+        var col = source_coords[1] - (vector.x * limit);
+
+        if ( row >= 8 || row < 0 || col >= 8 || col < 0 ) return null;
+        var piece = [this._board[row][col], this.coord2Algebraic(row, col)];
+        return piece;
+      },
+
+      this.firstPieceFromSourceAndVector = function(source, vector, limit) {
+        for (var i=1; i <= limit; i++) {
+          var piece = this.pieceFromSourceAndVector(source, vector, i);
+          if (piece == null) return null; // End of the board reached
+          if (piece[0] == '-') continue; // Square is blank
+          return piece;
+        };
+        return null;
+     },
+
+      this.pieceAt = function(algebraic) {
+        var square = this.algebraic2Coord(algebraic);
+        return this._board[square[0]][square[1]];
+      },
+
+      // Ex: this.movePiece({from : 'e2', to : 'e4'})
+      this.movePiece = function(num, move) {
+        // console.log("Moving a piece: (" + num + ") " + " from " + move.from + " to " + move.to);
+
+        var from = this.algebraic2Coord(move.from);
+        var to   = this.algebraic2Coord(move.to);
+        var piece = this.pieceAt(move.from);
+
+        if (this.pieceAt(move.to).piece) this.removePiece(num, move.to);
+
+        this._board[to[0]][to[1]] = this._board[from[0]][from[1]];
+        this._board[from[0]][from[1]] = '-';
+
+        this.saveTransition({type: 'm', num : num, dom_id : piece.id, from : move.from, to : move.to});
+      };
+
+      this.removePiece = function(num, algebraic) {
+        var piece = this.pieceAt(algebraic);
+
+        var square = this.algebraic2Coord(algebraic);
+        this._board[square[0]][square[1]] = '-';
+
+        this.saveTransition({type: 'r', num : num, dom_id : piece.id, piece: piece.piece, from : algebraic});
+      };
+
+      this.addPiece = function(num, piece_char, algebraic) {
+
+        var square = this.algebraic2Coord(algebraic);
+        var id = this.getNextPieceId();
+        this._board[square[0]][square[1]] = { id : id, piece : piece_char };
+
+        this.saveTransition({type: 'a', num : num, dom_id : id, to : algebraic, piece : piece_char});
+      };
+
+      // transitions = { 1 : { forward : ["m:50:4,1:6,1"], backward : ["m:50:6,1:4,1"] },
+      //                 2 :{ forward : ["a:50:P:4,1", "m:6:4,1:1,4"], backward : ["r:50", "m:6:1,4:4,1"] } }
+      this.saveTransition = function(options) {
+        var forward  = null;
+        var backward = null;
+        var num      = options.num;
+
+        if (options.type == 'a') {
+          forward  = ["a:" + options.dom_id + ":" + options.piece + ":" + options.to];
+          backward = ["r:" + options.dom_id];
+        } else if (options.type == 'm') {
+          forward  = ["m:" + options.dom_id + ":" + options.from + ":" + options.to];
+          backward = ["m:" + options.dom_id + ":" + options.to + ":" + options.from];
+        } else if (options.type == 'r') {
+          forward  = ["r:" + options.dom_id];
+          backward = ["a:" + options.dom_id + ":" + options.piece + ":" + options.from];
+        }
+
+        if (this.game.transitions[num] == null) {
+          this.game.transitions[num] = { forward : forward, backward : backward };
+        } else {
+          this.game.transitions[num].forward  = this.game.transitions[num].forward.concat(forward);
+          this.game.transitions[num].backward = backward.concat(this.game.transitions[num].backward);
+        }
+      };
+
+      this.getNextPieceId = function() {
+        return ++this.game.next_piece_id;
+      };
+
+      this.getMove = function(n) {
+        var n = (typeof n == "undefined") ? this.game.halfmove_number : n;
+        return this.game.moves[n -1];
+      };
+
+      this.getFormattedMove = function(n) {
+        var n      = (typeof n == "undefined") ? this.game.halfmove_number : n;
+        var f      = Math.ceil(n / 2.0);
+        var hellip = (n % 2 == 0) ? '... ' : '';
+        return f + ". " + hellip + this.getMove(n);
+      };
+
+      /* Utility Functions */
+      this.algebraic2Coord = function(algebraic) {
+        return [this.rank2Row(algebraic.substr(1, 1)), this.file2Col(algebraic.substr(0, 1))];
+      };
+
+      this.coord2Algebraic = function(row, col) {
+        return this.col2File(col) + this.row2Rank(row);
+      };
+
+      this.rank2Row = function(rank) {
+        return 8 - parseInt(rank);
+      };
+
+      this.file2Col = function(file) {
+        return file.charCodeAt(0) - ('a').charCodeAt(0);
+      };
+
+      this.row2Rank = function(row) {
+        return (8 - row) + '';
+      };
+
+      this.col2File = function(col) {
+        return String.fromCharCode( col + ('a').charCodeAt(0) );
+      };
+
+      this.flipVector = function(v) {
+        return { x: (v.x * -1), y : (v.y * -1), limit : v.limit };
+      };
+
+      this.replaceNumberWithDashes = function(str) {
+        var num_spaces = parseInt(str);
+        var new_str = '';
+        for (var i = 0; i < num_spaces; i++) { new_str += '-'; }
+        return new_str;
+      };
+
+      this.pluckAnnotation = function(str) {
+        this.game.raw_annotations = this.game.raw_annotations || [];
+        var ann_num = this.game.raw_annotations.length;
+        var annot   = str.substring(1,str.length-1); // Remove curly brackets
+        //annot       = annot.replace(/\\\{/g, '{');
+        //annot       = annot.replace(/\\\}/g, '}');
+
+        if (this.settings.json_annotations) {
+          eval("annot = " + annot);
+        }
+
+        this.game.raw_annotations.push(annot);
+        return "annotation-" + ann_num;
+      };
+
+      this.annotation = function() {
+        var default_value = (this.settings.json_annotations ? [] : '');
+        return this.game.annotations[this.game.halfmove_number] || default_value;
+      };
+
+      this.addAnnotation = function(annot) {
+        var current_annotations = this.annotation();
+        if (typeof current_annotations == "string") {
+          current_annotations += ", " + annot;
+        } else {
+          current_annotations.push(annot);
+        }
+
+        this.game.annotations[this.game.halfmove_number] = current_annotations;
+      };
+
+      this.debugBoard = function() {
+        $.eachWithContext(this, this.boardData(), function(j, row) {
+          $.eachWithContext(this, row, function(k, val) {
+            console.log('[' + j + ',' + k + '] = { id: ' + this.boardData()[j][k].id + ', piece: ' + this.boardData()[j][k].piece + ' }');
+          });
+        });
+      };
+
+      /* Patterns used for parsing */
+      this.patterns = {
+        castle_kingside     : /^O-O/,
+        castle_queenside    : /^O-O-O/,
+
+        piece_move          : /^([BKNQR])/,
+        rank_and_file_given : /^([BKNQR])([a-h])([1-8])x?([a-h])([1-8])/,
+        file_given          : /^([BKNQR])([a-h])x?([a-h])([1-8])/,
+        rank_given          : /^([BKNQR])([1-8])x?([a-h])([1-8])/,
+        nothing_given       : /^([BKNQR])x?([a-h])([1-8])/,
+
+        pawn_move           : /^([a-h])([1-8])/,
+        pawn_capture        : /^([a-h])x([a-h])([1-8])/,
+        pawn_queen          : /=([BNQR])/
+      };
+
+      /* Definitions of pieces */
+      this.pieces = {
+        R : {
+          vectors : [
+            { x :  0, y :  1, limit : 8 },
+            { x :  1, y :  0, limit : 8 },
+            { x :  0, y : -1, limit : 8 },
+            { x : -1, y :  0, limit : 8 }
+          ]
+        },
+        N : {
+          vectors : [
+            { x :  1, y :  2, limit : 1 },
+            { x :  2, y :  1, limit : 1 },
+            { x :  2, y : -1, limit : 1 },
+            { x :  1, y : -2, limit : 1 },
+            { x : -1, y : -2, limit : 1 },
+            { x : -2, y : -1, limit : 1 },
+            { x : -2, y :  1, limit : 1 },
+            { x : -1, y :  2, limit : 1 }
+          ]
+        },
+        B : {
+          vectors : [
+            { x :  1, y :  1, limit : 8 },
+            { x :  1, y : -1, limit : 8 },
+            { x : -1, y : -1, limit : 8 },
+            { x : -1, y :  1, limit : 8 }
+          ]
+        },
+        Q : {
+          vectors : [
+            { x :  0, y :  1, limit : 8 },
+            { x :  1, y :  0, limit : 8 },
+            { x :  0, y : -1, limit : 8 },
+            { x : -1, y :  0, limit : 8 },
+
+            { x :  1, y :  1, limit : 8 },
+            { x :  1, y : -1, limit : 8 },
+            { x : -1, y : -1, limit : 8 },
+            { x : -1, y :  1, limit : 8 }
+          ]
+        },
+        K : {
+          vectors : [
+            { x :  0, y :  1, limit : 1 },
+            { x :  1, y :  0, limit : 1 },
+            { x :  0, y : -1, limit : 1 },
+            { x : -1, y :  0, limit : 1 },
+
+            { x :  1, y :  1, limit : 1 },
+            { x :  1, y : -1, limit : 1 },
+            { x : -1, y : -1, limit : 1 },
+            { x : -1, y :  1, limit : 1 }
+          ]
+        }
+      }
+    }
+
+// FIXME: move to model

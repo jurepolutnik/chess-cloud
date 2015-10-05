@@ -1,0 +1,65 @@
+import sbt._
+import Keys._
+import com.typesafe.sbt.SbtNativePackager
+import com.typesafe.sbt.SbtNativePackager.packagerSettings
+import com.typesafe.sbt.SbtNativePackager.NativePackagerKeys
+import com.typesafe.sbt.SbtNativePackager.NativePackagerKeys._
+import com.typesafe.sbt.SbtNativePackager.Debian
+
+object WorkerMaster extends Build {
+
+  val ProfileDev = config("dev") extend (Runtime)
+  val ProfileQA = config("qa") extend (Runtime)
+
+  override lazy val settings = super.settings ++ Seq(
+    name := "chesscloud-cluster",
+    version := "0.1",
+    scalaVersion := "2.10.4",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-contrib" % "2.3.4",
+      "com.typesafe.akka" %% "akka-testkit" % "2.3.4",
+      "org.scalatest" % "scalatest_2.10" % "2.1.6" % "test",
+      "commons-io" % "commons-io" % "2.4" % "test")
+  )
+
+//  lazy val devSettings = (inConfig(ProfileDev)(Classpaths.configSettings ++ Defaults.configTasks ++ Defaults.resourceConfigPaths ++ Seq(
+//       bashScriptExtraDefines := Seq("""addJava "-Dconfig.file=${app_home}/../conf/master.conf"""")
+//    )): _*)
+
+  lazy val packagerSettings = SbtNativePackager.packagerSettings
+
+  lazy val projectSettings = Project.defaultSettings ++ packagerSettings ++ Seq(
+    packageDescription in Debian := "ChessCluster Csi",
+    maintainer in Debian := "Jure Polutnik",
+    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/master.conf""""
+  ) ++
+        inConfig(ProfileDev)(Classpaths.configSettings ++ Defaults.configTasks ++ Defaults.resourceConfigPaths ++ Seq(
+           //bashScriptExtraDefines ++= Seq("""addJava "-Dconfig.file=${app_home}/../conf/master.conf"""")
+        )) ++
+  inConfig(ProfileDev)(Classpaths.configSettings ++ Defaults.configTasks ++ Defaults.resourceConfigPaths ++ Seq(
+    //bashScriptExtraDefines ++= Seq("""addJava "-Dconfig.file=${app_home}/../conf/master.conf"""")
+  ))
+
+
+
+  //lazy val proj = Project(id = "ChessCluster", base = file("."), settings = projectSettings)
+
+  //override def projects = Seq(proj)
+
+  //  settings(inConfig(ProfileDev)(Classpaths.configSettings ++ Defaults.configTasks ++ Defaults.resourceConfigPaths ++ Seq(
+  //     bashScriptExtraDefines := Seq("""addJava "-Dconfig.file=${app_home}/../conf/master.conf"""")
+  //  )): _*).
+  //  settings(inConfig(ProfileQA)(Classpaths.configSettings ++ Defaults.configTasks ++ Defaults.resourceConfigPaths ++ Seq(
+  //     bashScriptExtraDefines := Seq("""addJava "-Dconfig.file=${app_home}/../conf/worker.conf"""")
+  //  )): _*)
+
+  lazy val root = Project (
+    "CheccCluster",
+    file("."),
+    settings = projectSettings
+  )
+  .configs (ProfileDev, ProfileQA)
+
+
+
+}

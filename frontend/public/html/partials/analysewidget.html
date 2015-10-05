@@ -1,0 +1,42 @@
+<section id="analysewidget" class="widget" ng-controller="AnalyseWidgetController">
+    <header>
+        <h4>
+            <i class="fa fa-gears"></i>
+                Analysis
+        </h4>
+    </header>
+    <div id="analysis" class="body">
+    <div class="alternatives" ng-show="paths">
+        <div class="info well well-sm">
+            <span>Depth: {{results.depth}}</span>
+            <span>Time: {{results.time}}</span>
+            <span>Nodes: {{results.nodes}}</span>
+        </div>
+        <div class="path" ng-repeat="path in paths">
+                <div class="score" ng-class="{
+                        plus: path.score.charAt(0)=='+',
+                        minus: path.score.charAt(0)=='-',
+                        mate: path.score.charAt(0)=='#'
+                        }">
+                    <strong>{{path.score}}</strong>
+                </div>
+                <div class="moves movesList">
+                    <span ng-repeat="move in path.halfMoves track by $index"
+                          ng-click="chessService.moveToPath(path, $index)"
+                          ng-class="{selected : path==chessService.getCurrentGame() && $index==path.currentHalfMove}">
+                        {{move}}
+                    </span>
+                </div>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" ng-hide="liveAnalyse" ng-click="toggleLiveAnalyse()">Analyse!</button>
+    <button class="btn btn-primary" ng-show="liveAnalyse" ng-click="toggleLiveAnalyse()">Stop</button>
+    <button class="btn btn-default" ng-click="playPosition()">Play current position</button>
+    </div>
+</section>
+
+ <script>
+    var spinner = new Spinner().spin();
+    $("#spinner").append (spinner.el);
+ </script>

@@ -1,0 +1,21 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+GET     /ws                         controllers.AppController.actorWebSocket
+GET     /analyse/$fen<.*>           controllers.AppController.analyse(fen: String)
+GET     /comet                      controllers.AppController.comet()
+
+# Tasks
+
+GET     /							controllers.Application.index
+#GET     /							controllers.Application.landing
+#GET     /app                           controllers.Application.index
+
+GET     /games/$id<[1-9][0-9]*>       controllers.Games.get(id: Int)
+GET     /games                        controllers.Games.list
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET     /partials/*file            controllers.Assets.at(path="/public/html/partials", file)
+

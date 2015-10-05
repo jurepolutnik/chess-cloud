@@ -1,0 +1,57 @@
+<div class="row">
+    <div class="col-md-3">
+        <div class="col-md-12">
+        </div>
+        <section class="widget">
+
+            <header>
+                <h4>
+                    <i class="fa fa-info-circle"></i>
+                        Game information
+                </h4>
+            </header>
+            <div class="body">
+                <div id="gameInfo">
+                    <!--h5 class="page-title">{{info.White}} vs {{info.Black}}</h5-->
+                    <div><span>Event: </span> {{info.Event}}, {{info.Date}}</div>
+                    <div><span>Round: </span> {{info.Round}}</div>
+                    <div><span>White: </span> {{info.White}}</div>
+                    <div><span>Black: </span> {{info.Black}}</div>
+                    <div><span>Moves: </span> {{info.Moves}}</div>
+                    <div><span>Result: </span> {{info.Result}}</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-7">
+        <div class="col-md-8">
+            <section id="sectionBoard" class="widget">
+
+            <div id="board"></div>
+            <div id="boardwidget" ng-include src="'partials/chessboardwidget.html'" > </div>
+            </section>
+        </div>
+        <div class="col-md-4">
+            <section id="sectionMoves" class="widget">
+
+            <div id="moveswidget" ng-include src="'partials/moveswidget.html'" > </div>
+            </section>
+        </div>
+            <div class="col-md-12">
+                <div id="analyseWidget" ng-include src="'partials/analysewidget.html'" > </div>
+            </div>
+    </div>
+</div>
+
+
+ <script>
+
+   //require(['angular','jquery'], function (angular, $) {
+   //});
+ </script>
+
+
+
+
+

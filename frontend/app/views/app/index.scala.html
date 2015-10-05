@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ChessCloud</title>
+
+    <link href="assets/template/css/application.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/lib/chessboardjs/css/chessboard.css" />
+    <link rel="stylesheet" href="/assets/stylesheets/border.css">
+    <link rel="stylesheet" href="/assets/stylesheets/main.css">
+
+    <link rel="shortcut icon" href="assets/template/img/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta charset="utf-8">
+</head>
+
+<body  class="background-dark" ng-controller='GlobalController'>
+
+<div class="splash centered" ng-cloak="">
+    <h2>Loading ...</h2>
+</div>
+
+<div ng-cloak>
+<div class="logo">
+    <h3><a href="index.html">Chess<strong>Cloud</strong></a></h3>
+</div>
+<nav id="sidebar" class="sidebar nav-collapse collapse">
+    <ul id="side-nav" class="side-nav" ng-controller="NavigationController">
+        <li ng-repeat='item in navigationItems'
+            ng-class="{active:isActiveRoute(item.route)}">
+            <a ng-href='#{{item.route}}'>
+                <i class="fa {{item.icon}}"></i> <span class="name">{{item.text}}</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+<div class="wrap">
+    <header class="page-header" ng-include src="'partials/navbar.html'"> </header>
+
+    <div class="content container">
+                <div ng-view></div>
+    </div>
+</div>
+    </div>
+
+
+<!-- jquery and friends -->
+<script src="assets/template/lib/jquery/jquery-2.0.3.min.js"> </script>
+
+<!-- jquery plugins -->
+<script src="assets/template/lib/jquery/jquery.icheck.js"></script>
+<script src="assets/template/lib/jquery/jquery.sparkline.js"></script>
+<script src="assets/template/lib/jquery/jquery-ui-1.10.3.custom.js"></script>
+<script src="assets/template/lib/jquery/jquery.slimscroll.js"></script>
+
+<!-- bootstrap default plugins -->
+<script src="assets/template/lib/bootstrap/transition.js"></script>
+<script src="assets/template/lib/bootstrap/collapse.js"></script>
+<script src="assets/template/lib/bootstrap/alert.js"></script>
+<script src="assets/template/lib/bootstrap/tooltip.js"></script>
+<script src="assets/template/lib/bootstrap/popover.js"></script>
+<script src="assets/template/lib/bootstrap/button.js"></script>
+<script src="assets/template/lib/bootstrap/tab.js"> </script>
+<script src="assets/template/lib/bootstrap/dropdown.js"></script>
+<script src="assets/template/lib/bootstrap/modal.js"></script>
+
+<link href="assets/template/lib/bootstrap-switch/bootstrap-switch.css" rel="stylesheet">
+<script src="assets/template/lib/bootstrap-switch/bootstrap-switch.js"></script>
+
+<script src="assets/template/lib/spinjs/spin.js"></script>
+
+<script data-main="assets/javascripts/main.js" type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.14/require.js"></script>
+
+
+<script type="text/template" id="sidebar-settings-template">
+    <% auto = sidebarState == 'auto'%>
+    <% if (auto) {%>
+    <button type="button"
+            data-value="icons"
+            class="btn-icons btn btn-transparent btn-sm">Icons</button>
+    <button type="button"
+            data-value="auto"
+            class="btn-auto btn btn-transparent btn-sm">Auto</button>
+    <%} else {%>
+    <button type="button"
+            data-value="auto"
+            class="btn btn-transparent btn-sm">Auto</button>
+    <% } %>
+</script>
+
+
+<!-- Hidden COMET iframe - used by AnalyseService -->
+<iframe id="comet-analyse-frame" src="" style="display:none;"> </iframe>
+<script type="text/javascript">
+    var update = function(msg)
+    {
+        require(['angular'], function (angular) {
+            // Updates analyse service 
+            var service = angular.injector(['ng', 'myApp']).get("AnalyseService");
+            service.update(msg);
+        });
+    }
+</script>
+
+</body>
+</html>

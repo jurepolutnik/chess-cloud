@@ -1,0 +1,14 @@
+-- Used libraries -- 
+Chess PGN/FEN parser : https://github.com/bmarini/jchess
+
+Angularjs
+jQuery
+requireJS
+
+
+
+TODO
+-----------------
+- Nginx load balancing
+- Notifications - request in queue
+- input validation (fen validator)

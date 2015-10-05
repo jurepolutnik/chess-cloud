@@ -1,0 +1,16 @@
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title" id="myModalLabel">Import PGN</h4>
+
+            </div>
+            <div class="modal-body">
+                <div class="controls form-group">
+                    <textarea id="description" ng-model="pgn" rows="8" name="text" class="form-control"></textarea>
+                </div>
+              <alert ng-repeat="alert in alerts" type="alert.type" close="closeAlert($index)">{{alert.msg}}</alert>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" ng-click="cancel()">Close</button>
+                <button type="button" class="btn btn-primary" ng-click="analyse(pgn)">Analyse</button>
+            </div>

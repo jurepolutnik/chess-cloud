@@ -1,0 +1,61 @@
+<div class="row">
+    <div class="col-md-3">
+            <section class="widget">
+            <header>
+                <h4>
+                    <i class="fa fa-info-circle"></i>
+                        Computer information
+                </h4>
+            </header>
+            <div class="body">
+                <div >
+                    <!--h5 class="page-title">{{info.White}} vs {{info.Black}}</h5-->
+                    <div><span>Name: </span> Stockfish 5</div>
+                    <div><span>Strenght: </span> {{strength}}</div>
+                    <div class="clearfix">
+                        <button style="float:right" type="button" class="btn btn-default" ng-click="newgame()">New game</button>
+                    </div>
+                </div>
+            </div>
+            </section>
+
+            <section class="widget">
+            <header>
+                <h4>
+                    <i class="fa fa-info-circle"></i>
+                        Status
+                </h4>
+            </header>
+            <div class="body">
+                <div >
+                    <span>Status: <strong>{{status || 'n/a'}}</strong></span>
+                    <br>
+                    Live score: <strong>{{path.score || '+0.0'}}</strong>
+                    <div class="score" ng-class="{
+                            plus: path.score.charAt(0)=='+',
+                            minus: path.score.charAt(0)=='-',
+                            mate: path.score.charAt(0)=='#'
+                            }">
+                    </div>
+                    <!--h5 class="page-title">{{info.White}} vs {{info.Black}}</h5-->
+                </div>
+            </div>
+            </section>
+    </div>
+
+    <div class="col-md-7">
+        <div class="col-md-8">
+            <section id="sectionBoard" class="widget">
+
+            <div id="board"></div>
+            <div id="boardwidget" ng-include src="'partials/chessboardwidget.html'" > </div>
+            </section>
+        </div>
+        <div class="col-md-4">
+            <section id="sectionMoves" class="widget">
+
+            <div id="moveswidget" ng-include src="'partials/moveswidget.html'" > </div>
+            </section>
+        </div>
+    </div>
+</div>

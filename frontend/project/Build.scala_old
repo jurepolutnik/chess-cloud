@@ -1,0 +1,24 @@
+import sbt._
+import Keys._
+import play.Project._
+
+object ApplicationBuild extends Build {
+
+  val appName = "PlayAkkaAngularWebSocket"
+  val appVersion = "1.0"
+
+  val appDependencies = Seq(
+    // Add your project dependencies here,
+    "com.typesafe.akka" %% "akka-contrib" % "2.3.4"
+    )
+
+  val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(
+    lessEntryPoints <<= baseDirectory(customLessEntryPoints),
+    version := appVersion,
+    libraryDependencies ++= appDependencies
+  )
+
+  def customLessEntryPoints(base: File): PathFinder = (
+    (base / "app" / "assets" / "stylesheets" * "*.less"))
+
+}

@@ -1,0 +1,51 @@
+<style type="text/css">
+    body { font-family: arial, sans-serif; }
+
+    /* board */
+    #MovesTable span.selected {background-color:#cccccc }
+    #MovesTable span:hover {background-color:#999999; cursor: hand; cursor: pointer; }
+</style>
+
+<div id="MovesTable" ng-controller="MovesWidgetController">
+	<table id="MovesTableHeader" class="table table-condensed" style="margin-bottom:10px">
+	<thead>
+		<tr>
+			<th>#</th>
+			<th>White</th>
+			<th>Black</th>
+		</tr>
+	</thead>
+    </table>
+
+    <div id='MovesList'>
+        <table class="table movesList">
+        <tbody>
+            <tr ng-repeat="move in game.fullMoves track by $index">
+                <td >{{$index+1}}.</td>
+                <td >
+                    <span ng-class="{selected : $index*2==game.currentHalfMove}"
+                    ng-click="chessService.moveToPath(game, $index*2)">
+                    {{move.white}}
+                </span></td>
+                <td >
+                    <span ng-class="{selected : $index*2+1==game.currentHalfMove}"
+                    ng-click="chessService.moveToPath(game, $index*2+1)">
+                    {{move.black}}
+                </span></td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+    <!--p> Moves : {{game.transitions.length}}</p>
+    <p> FEN : {{getCurrentFen()}}</p-->
+</div>
+
+ <script type="text/javascript">
+  $("#MovesList").slimScroll({
+        height: 'inherit',
+        size: '5px',
+        alwaysVisible: true,
+        railVisible: true
+    });
+ </script>
+
