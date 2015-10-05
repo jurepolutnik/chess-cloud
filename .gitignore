@@ -1,0 +1,16 @@
+/**/target/
+**/target/
+logs/
+
+deploy/deploy/
+deploy/logs/
+deploy/dist/
+deploy/credentials
+deploy/conf_local.ini
+
+/**/data/
+**/data/
+**/*.pyc
+**/*.swp
+*/*.tar.gz
+
