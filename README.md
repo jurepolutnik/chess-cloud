@@ -30,11 +30,39 @@ Deployment is done using [Fabric](http://www.fabfile.org/) scripts and [LibCloud
 to AWS and OpenStack, however adding additional provider should be fairly easy (extending scripts/driver.py). 
 
 #### Prerequisite
-- Python, VirtualEnv, Pip > Set up python virtual environment and install requirements.
-- 
+Python, VirtualEnv, Pip > Set up python virtual environment and install requirements.
+
+`chesscloud-deps` image available in target cloud enviornment. It can be default image, where
+provision is run (installs Java8) on created nodes. 
 
 #### Configuration
 
-Configuration file `conf.ini`. 
+Configuration file `conf.ini` holds cloud provider authentication, target infrastructure properties (VM sizes), and
+name of prepared image `chesscloud-deps`, which should be prepared in advance and will be used when spwning new VMs.
 
-`cd deploy/ && fab create_cluster && fab deploy_cluster`
+#### Commands (fabric)
+```
+# Creating and deploying cluster
+fab create_cluster 
+fab deploy_cluster
+
+# Scaling up and down (argument: cluster_node=[frontend|master|worker])
+fab scale_up
+fab scale_down
+
+# Listing nodes - or selection
+fab frontends | masters | workers
+fab cluster | all
+
+# Starting and stopping cluster or selected nodes
+fab stop_cluster | start_cluster
+fab <selection> start|stop
+
+# Destroying cluster or selected nodes
+fab destroy_cluster
+fab <slection> destroy
+
+# Misc commands - ssh to machine, execute cmd on target machine, ...
+fab <selection> ssh | cmd get_log | tail_log
+
+```
