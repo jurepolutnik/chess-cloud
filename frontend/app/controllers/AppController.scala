@@ -36,7 +36,7 @@ object AppController extends Controller {
       val fenFixed = fen.replaceAll("%20", " ")
 
       val myActor = Akka.system.actorOf(Props[AsyncActor])
-      (myActor ? fenFixed).map(s => Ok(s.toString))
+      (myActor ? fenFixed)(20.seconds).map(s => Ok(s.toString))
   }
 
   def comet () = Action {
