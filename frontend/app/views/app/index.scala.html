@@ -97,7 +97,7 @@
     {
         require(['angular'], function (angular) {
             // Updates analyse service
-            var service = angular.injector(['ng', 'myApp']).get("AnalyseService");
+            var service = angular.injector(['ng', 'myApp.services']).get("AnalyseService");
             service.update(msg);
         });
     }
