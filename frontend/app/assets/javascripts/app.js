@@ -6,9 +6,9 @@ define(['angular', 'services/services', 'directives/directives',
 
 			return angular.module(
 					'myApp',
-					[ 'ui.bootstrap','ngRoute','ngResource','myApp.filters', 'myApp.services', 'myApp.directives',
-                        'myApp.controllers']).config(
-					[ '$routeProvider', function($routeProvider) {
+					[ 'ui.bootstrap','angulartics', 'angulartics.google.analytics','ngRoute','ngResource',
+						'myApp.filters', 'myApp.services', 'myApp.directives','myApp.controllers'])
+						.config([ '$routeProvider', function($routeProvider) {
 						$routeProvider.when('/home', {
 							templateUrl : 'partials/home.html',
 							controller : 'HomeController'
@@ -30,10 +30,9 @@ define(['angular', 'services/services', 'directives/directives',
 							controller : 'PlayController'
 						});
 
-
 						$routeProvider.otherwise({
 							redirectTo : '/home'
 						});
 					} ]);
-			
+
 		});

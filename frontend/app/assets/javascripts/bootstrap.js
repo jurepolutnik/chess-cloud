@@ -1,4 +1,4 @@
-define([ 'require', 'angular', 'angular.route','angular.resource', 'ui.bootstrap', 'app' ], function(require, angular) {
+define([ 'require', 'angular', 'angular.route','angular.resource','angulartics','angulartics-google-analytics', 'ui.bootstrap', 'app' ], function(require, angular) {
 
 	'use strict';
 
